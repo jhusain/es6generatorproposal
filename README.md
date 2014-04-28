@@ -112,12 +112,24 @@ In addition to these prototype methods, the Iterable constructor will also have 
 Add a return method to Generators
 ----------------------------------------------
 
+Iterators ￼:
+
+1. Enable developers to write asynchronous code that appears to be synchronous. (Task.js)
+2. Allow developers to write lazy code that appears to be eager.
+
+One of the more common reasons for lazily processing sequences of data, is to avoid having any large amount of data in memory at any one time.
+
+
 Generators and Iterators can optionally provide a return method which should be invoked by the data consumer in the event that the function is exited before being run to completion. Semantically calling the return function is equivalent to inserting a return statement at the current position within the generator function.
 
 ```JavaScript
-var iter = 
-
+var iter = functionThatReturnsGenerator();
+try {
+   
+}
 ```
+
+
 
 Generator functions should return Iterables, not Iterators
 --------------------------
