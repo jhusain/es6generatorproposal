@@ -69,7 +69,13 @@ Array.prototype.concatMap = function(projection) {
 }
 ```
 
-In the absence of comprehensions in ES6, this method will allow developers to compose array expressions using function chaining. The name concatMap (used in Haskell) has been deliberately selected in lieu of flatMap. Why specify concatenation explicitly? After all, concatenation is the only reasonable way of flattening a two-dimensional array or generator. The same is not true of asynchronous generators. Asynchronous generators send information over time, allowing for multiple ways of flattening a two-dimensional asynchronous generator. By being specific about the kind of flattening strategy, we make refactoring a synchronous generator expression to an asynchronous generator expression easier. By being explicit about the flattening strategy, the asynchronous generator expression will have the same ordering of elements as the synchronous generator expression by default.
+In the absence of comprehensions in ES6, this method will allow developers to compose array expressions using function chaining. The name concatMap (used in Haskell) has been deliberately selected in lieu of flatMap, in order to be explicit about the type of flattening strategy applied after the map operation.
+
+Why specify concatenation explicitly? While concatenation is the only sensible way of flattening a two-dimensional array or generator, the same same is not true for asynchronous generators. Asynchronous generators send information over time which allows for the other flattening strategies to be applied. 
+
+Concatenation flattens a two-dimensional collection by ordering elements based on the order in which each inner collection arrives, as well as the order of the elements within each inner collection. Another flattening strategy is a __merge__, which when applied to a two-dimensional asynchronous generator orders items based on the order they arrive in time, irrespective of the order in which their inner collections arrives. Merge acts like a funnel, forwarding items as soon as they arrive in time, and is appropriate when throughput is more important than preserving order.
+
+By being explicit about the kind of flattening strategy being applied, we remove a potential __refactoring hazard__. Let's say a developer decides that they want to change a generator expression to an asynchronous generator expression. By forcing the developer to be explicit about the flattening strategy, the asynchronous generator expression will have the same ordering of elements as the synchronous generator expression by default.
 
 The Iterable Constructor
 --------------------------------
@@ -103,8 +109,27 @@ In addition to these prototype methods, the Iterable constructor will also have 
 * of
 * from
 
+Add a return method to Generators
+----------------------------------------------
+
+Generators and Iterators can optionally provide a return method which should be invoked by the data consumer in the event that the function is exited before being run to completion. Semantically calling the return function is equivalent to inserting a return statement at the current position within the generator function.
+
+```JavaScript
+var iter = 
+
+```
+
 Generator functions should return Iterables, not Iterators
----------------------------------------------------------------------------
+--------------------------
+
+This change is motivated by a simple design goal:
+
+__It should be possible to consume the data produced by a generator function without needing to directly use an Iterator.__
+
+Iterators are mutable data structures with a lifecycle, and they are extraordinarily difficult to 
+
+
+
 Iterators have Iterators are mutable data structures and they are complex to use. We should embrace the following design principle:
 
 * developer should be able to 
@@ -113,12 +138,4 @@ Iterable Adapteee
  
  any object that  can create an adapter
 
-Add a return method to Generators
-----------------------------------------------
 
-Generators can optionally provide a return method that can be invoked by the data consumer to exit the function early. Semantically, this is like inserting a return statement at the current position within the generator function.
-
-```JavaScript
-var iter
-
-```
