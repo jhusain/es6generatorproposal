@@ -79,16 +79,17 @@ By being explicit about the kind of flattening strategy being applied, we remove
 Add a return method to Generators
 ----------------------------------------------
 
-Generator allow for the lazy evaluation of algorithms. Lazy evaluation is particularly useful in the area of stream processing, allowing large streams of data to be transformed and sent elsewhere as it arrives. The alternative, loading an entire string of data into memory before processing, is impractical and inefficient for data sets of a certain size.
+Generator allow for the lazy evaluation of algorithms. Lazy evaluation is particularly useful in the area of stream processing, allowing chunks of data to be transformed and sent elsewhere as they arrives. The alternative, loading an entire string of data into memory before processing, is impractical for data sets of a certain size.
 
-Today it is possible for generators to abstract over scarce resources like IO streams. However the consumer must iterate the generator to completion to give the generator function the opportunity to free it's scarce resources. This makes common operations like paging impractical because of the overhead involved in continuing to consume a stream long after the desired data has been acquired.
+Today it is possible for generators to abstract over scarce resources like IO streams. However the consumer must iterate the generator to completion to give generator function the opportunity to run finally blocks and free the scarce resources. This artificial constraint makes common operations like paging impractical because of the unnecessary overhead involved. Why should a consumer need to continue reading from a stream long after the desired data has been acquired?
 
-The situation can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics. Invoking return should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, getting the asynchronous generator the opportunity to free scarce resources.
+This problem can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics. Invoking return should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources.
 
 This will allow useful methods like takeUntil to be written.
 
 (Example)
 
+As you can see from the example above, takeUntil cannot be chained with other generator processing methods left-to-right. This is awkward. Thanks to frameworks like jQuery, JavaScript developers have grown accustomed to building expressions by a method chaining. 
 
 The Iterable Constructor
 --------------------------------
