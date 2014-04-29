@@ -1,13 +1,12 @@
 ES6 Generator Proposal
 ==============================
 
-The current generator proposal in ES6 is deficient in several an important ways.
+The current generator proposal in ES6 is deficient in several important ways.
 
-1. __Comprehensions are not future proof.__ For example, they can not be used to compose the forthcoming parallel array class in ES7. http://smallcultfollowing.com/babysteps/blog/2014/04/24/parallel-pipelines-for-js/
-2. Iterables cannot be composed without the use of the generator comprehension syntax.
-3. Iterator currently implements the Iterable contract by returning itself. This undermines the usefulness of the Iterable contract by making it impossible to know whether an iterator has been created for a specific consumer, or is being used by multiple consumers. This ambiguity prevents us from writing common combinators (ex. retry) over this contract.
-4. Generators functions return iterators, which do not have a shared prototype. This makes it difficult to express generator composition without using list comprehensions.
-5. Generator functions cannot be returned by the data consumer. This means that generators that abstract over scarce resources (ex. IO streams) cannot free these resources without being iterated to completion. 
+1. Comprehensions are not future proof. They will not be able to be used to compose either the forthcoming parallel array or the asynchronous generator objects that are slated for introduction in ES7. http://smallcultfollowing.com/babysteps/blog/2014/04/24/parallel-pipelines-for-js/
+2. The generator comprehension syntax provides functionality not otherwise available through method chaining.
+3. The Iterable contract provides no guarantee that the iterator object has been freshly created for the consumer. Without a guarantee of freshness, it is impossible to implement common stream operators over this contract (ex. retry).
+4. Generators lack a return() semantic, which forces consumers to fully complete iteration in order to free any scarce resources (ex. IO streams). This makes common stream operations like paging prohibitively expensive.
  
 These issues can be resolved if we make the following changes to the ES6 specification. 
 
@@ -77,6 +76,20 @@ Concatenation flattens a two-dimensional collection by ordering elements based o
 
 By being explicit about the kind of flattening strategy being applied, we remove a potential __refactoring hazard__. Let's say a developer decides that they want to change a generator expression to an asynchronous generator expression. By forcing the developer to be explicit about the flattening strategy, the asynchronous generator expression will have the same ordering of elements as the synchronous generator expression by default.
 
+Add a return method to Generators
+----------------------------------------------
+
+Generator allow for the lazy evaluation of algorithms. Lazy evaluation is particularly useful in the area of stream processing, allowing large streams of data to be transformed and sent elsewhere as it arrives. The alternative, loading an entire string of data into memory before processing, is impractical and inefficient for data sets of a certain size.
+
+Today it is possible for generators to abstract over scarce resources like IO streams. However the consumer must iterate the generator to completion to give the generator function the opportunity to free it's scarce resources. This makes common operations like paging impractical because of the overhead involved in continuing to consume a stream long after the desired data has been acquired.
+
+The situation can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics. Invoking return should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, getting the asynchronous generator the opportunity to free scarce resources.
+
+This will allow useful methods like takeUntil to be written.
+
+(Example)
+
+
 The Iterable Constructor
 --------------------------------
 
@@ -108,26 +121,6 @@ In addition to these prototype methods, the Iterable constructor will also have 
 
 * of
 * from
-
-Add a return method to Generators
-----------------------------------------------
-
-Iterators ￼:
-
-1. Enable developers to write asynchronous code that appears to be synchronous. (Task.js)
-2. Allow developers to write lazy code that appears to be eager.
-
-One of the more common reasons for lazily processing sequences of data, is to avoid having any large amount of data in memory at any one time.
-
-
-Generators and Iterators can optionally provide a return method which should be invoked by the data consumer in the event that the function is exited before being run to completion. Semantically calling the return function is equivalent to inserting a return statement at the current position within the generator function.
-
-```JavaScript
-var iter = functionThatReturnsGenerator();
-try {
-   
-}
-```
 
 
 
