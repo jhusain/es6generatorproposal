@@ -3,7 +3,7 @@ ES6 Generator Proposal
 
 The current generator proposal in ES6 is deficient in several important ways.
 
-1. Comprehensions are not future proof. They will not be able to be used to compose either the forthcoming parallel array or the asynchronous generator objects that are slated for introduction in ES7. http://smallcultfollowing.com/babysteps/blog/2014/04/24/parallel-pipelines-for-js/
+1. Comprehensions are not future proof. They will not be able to be used to compose either the parallel array or the asynchronous generator objects slated for introduction in ES7. http://smallcultfollowing.com/babysteps/blog/2014/04/24/parallel-pipelines-for-js/
 2. The generator comprehension syntax provides functionality not otherwise available through method chaining.
 3. The Iterable contract does not dependably create a new iterator object for each iteration. Due to this inconsistency, it is impossible to implement several common stream operators over this contract (ex. retry).
 4. There is no way to short-circuit a generator. This forces consumers to fully complete iteration in order to free any scarce resources (ex. IO streams) opened by the generator. As a result, paging streams of data is prohibitively expensive.
@@ -88,13 +88,13 @@ This unnecessary constraint makes common operations like paging impractical beca
 
 This problem can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics. Invoking return() should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources. To guarantee the termination of the generator function on return(), yield statements will be prohibited within finally blocks.
 
-The addition of the return method to the iterator will allow useful methods like takeWhile to be written.
+The addition of the return method to the iterator will allow commonly used methods like takeWhile to be written.
 
 (Example)
 
 Methods like takeWhile allow developers to conditionally consume sequences without having to build state machines.
 
-However as you can see from the example above, takeUntil cannot be chained with other combinators left-to-right because iterators do not have a shared prototype. Instead it is necessary to compose functions right to left. Thanks to frameworks like jQuery, JavaScript developers have grown accustomed to building expressions via method chaining. Dave Herman recently coined a name for this pattern: _the pipeline adapter pattern_.
+However as you can see from the example above, takeUntil cannot be chained with other combinators left-to-right because iterators do not have a shared prototype. Instead it is necessary to compose functions right to left. Thanks to frameworks like jQuery, JavaScript developers have grown accustomed to building expressions via method chaining. Dave Herman recently minted a name for this pattern: _the pipeline adapter pattern_.
 
 How can we enable developers to build complex stream processors using the pipeline pattern?
 
@@ -109,7 +109,8 @@ function Iterable(iterateMethodDefinition) {
   this.iterate = iterateMethodDefinition;
 }
 ```
-The Iterable prototype will have lazy versions of the following methods found on the Array prototype:
+
+The introduction of the Iterable constructor provides a prototype on which to add pipeline methods. The Iterable prototype should have lazy versions of the following methods:
 
 * map
 * concatMap
@@ -140,11 +141,13 @@ The Iterable constructor's iterate() method is expected to return a newly constr
 Generator functions should return Iterables, not Iterators
 --------------------------
 
+Today ES6 is optimized to make the Iterator easy to use.  __This is not the right goal.__ Iterators are complex objects, requiring state machines to use correctly.
+
 This change is motivated by a simple design goal:
 
-__It should be possible to consume the data produced by a generator function without needing to directly use an Iterator.__
+__It should be possible to consume the data produced by a generator function without needing to directly use an Iterator..__
 
-Iterators are mutable data structures with a lifecycle, and they are extraordinarily difficult to 
+Iterators have complex interfaces, and require state machines to consume. With the introduction of the return method, they now have a lifecycle as well.
 
 
 
