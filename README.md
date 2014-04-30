@@ -30,11 +30,11 @@ var sums = (
 
 The combination of a comprehension syntax and the forthcoming async/await syntax in ES7 will remove the need to use closures entirely in many circumstances. So why delay comprehensions until ES7?
 
-*The current comprehension syntax works only on arrays and generators.* This syntax is not future proof, because it will not work on the forthcoming ES7 parallel array or the asynchronous generator. It is clear that we would like comprehensions to work on these additional types, so we should introduce a more generic syntax (1-2-n rule).
+__Comprehensions are not future proof__, because they will not work on the forthcoming ES7 parallel array, nor the yet-to-be proposed asynchronous generator. The comprehension syntax should be able to be used to compose any collection type, so we should introduce a more generic syntax (1-2-n rule).
 
 In ES7 we will add a monadic comprehension syntax capable of composing arrays, variables, parallel arrays, asynchronous generators, and any type introduced in the future. The monadic comprehension syntax will desugar into method calls, allowing the type itself to define how it is composed. For more information, see the ES7 monadic comprehension syntax proposal below.
 
-Although some developers prefer using the comprehension syntax, it will never support all operations.  If developers want to use operations like some(), any(), and contains() they will be forced to use method chaining. In these circumstances, many developers will eschew the comprehension syntax in order to avoid using different composition styles in a single expression. In other words, many developers will prefer this…
+Although some developers prefer using the comprehension syntax, it will never support all operations.  If developers want to use operations like some(), any(), and contains() they will be forced to use method chaining. In these circumstances, many developers will eschew the comprehension syntax in order to avoid using using multiple composition styles in a single expression. In other words, many developers will prefer this…
 
 ```Javascript
 var numberExists = list.concatMap(y => otherList.map(x => x + y)).some(x => 42);
@@ -79,26 +79,35 @@ By being explicit about the kind of flattening strategy being applied, we remove
 Add a return method to Generators
 ----------------------------------------------
 
-Generator allow for the lazy evaluation of algorithms. Lazy evaluation is particularly useful in the area of stream processing, allowing chunks of data to be transformed and sent elsewhere as they arrives. The alternative, loading an entire string of data into memory before processing, is impractical for data sets of a certain size.
+Generator allow for the lazy evaluation of algorithms. Lazy evaluation is particularly useful in the area of stream processing, allowing chunks of data to be transformed and sent elsewhere as they arrive. The alternative, loading an entire stream of data into memory before processing, is impractical for large data sets.
 
-Today it is possible for generators to abstract over scarce resources like IO streams. However the consumer must iterate the generator to completion to give generator function the opportunity to run finally blocks and free the scarce resources. This artificial constraint makes common operations like paging impractical because of the unnecessary overhead involved. Why should a consumer need to continue reading from a stream long after the desired data has been acquired?
-
-This problem can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics. Invoking return should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources.
-
-This will allow useful methods like takeUntil to be written.
+Today it is possible for generators to abstract over scarce resources like IO streams. However the consumer must iterate the generator to completion to give the generator function the opportunity to free the scarce resources and its finally block.
 
 (Example)
 
-As you can see from the example above, takeUntil cannot be chained with other generator processing methods left-to-right. This is awkward. Thanks to frameworks like jQuery, JavaScript developers have grown accustomed to building expressions by a method chaining. 
+This imposed constraint makes common operations like paging impractical because of the overhead involved. Why should a consumer need to continue reading from a stream long after the desired data has been acquired?
+
+This problem can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics. Invoking return() should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources. To guarantee the termination of the generator function on return(), yield statements will be prohibited within finally blocks.
+
+The addition of the return method to the iterator will allow useful methods like takeWhile to be written.
+
+(Example)
+
+Methods like takeWhile allow developers to conditionally consume sequences without having to build state machines.
+
+However as you can see from the example above, takeUntil cannot be chained with other combinators left-to-right because iterators do not have a shared prototype. Thanks to frameworks like jQuery, JavaScript developers have grown accustomed to building expressions via method chaining. Dave Herman recently coined a name for this pattern: _the pipeline adapter pattern_.
+
+How can we enable developers to build complex stream processors using the pipeline pattern?
+
 
 The Iterable Constructor
 --------------------------------
 
-The Iterable contract will be replaced by an explicit constructor. The Iterable constructor will be used to create all instances of Iterables. An Iterable has an iterator method which can return a Generator or an Iterator. 
+The Iterable contract should be replaced by an explicit constructor. The Iterable constructor will be used to create all instances of Iterables. An Iterable has an iterate() method which can return a Generator or an Iterator. 
 
 ```JavaScript
 function Iterable(iterateMethodDefinition) {
-  this.iterator = iterateMethodDefinition;
+  this.iterate = iterateMethodDefinition;
 }
 ```
 The Iterable prototype will have lazy versions of the following methods found on the Array prototype:
@@ -123,7 +132,11 @@ In addition to these prototype methods, the Iterable constructor will also have 
 * of
 * from
 
+The introduction of the Iterable constructor allows stream processing expressions to be built using the pipeline adapter pattern. 
 
+The style of composition is expressive enough to replace comprehensions until they are introduced in ES7.
+
+The Iterable constructor's iterate() method is expected to return a newly constructed iterator every time it is invoked.
 
 Generator functions should return Iterables, not Iterators
 --------------------------
