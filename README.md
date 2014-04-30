@@ -4,9 +4,9 @@ ES6 Generator Proposal
 The current generator proposal in ES6 is deficient in several important ways.
 
 1. Comprehensions are not future proof. They will not be able to be used to compose either the parallel array or the asynchronous generator objects slated for introduction in ES7. http://smallcultfollowing.com/babysteps/blog/2014/04/24/parallel-pipelines-for-js/
-2. The generator comprehension syntax provides functionality not otherwise available through method chaining.
-3. The Iterable contract does not dependably create a new iterator object for each iteration. Due to this inconsistency, it is impossible to implement several common stream operators over this contract (ex. retry).
-4. There is no way to short-circuit a generator. This forces consumers to fully complete iteration in order to free any scarce resources (ex. IO streams) opened by the generator. As a result, paging streams of data is prohibitively expensive.
+2. The generator comprehension syntax provides functionality not otherwise available through the standard library.
+3. The Iterable contract does not dependably create a new iterator object for each iteration. Due to this inconsistency, it is impossible to implement common stream operators over this contract (ex. retry).
+4. There is no way to short-circuit a generator. As a result, paging streams of data is prohibitively expensive.
  
 These issues can be resolved if we make the following changes to the ES6 specification. 
 
@@ -19,7 +19,7 @@ The comprehension syntax's value proposition is that it *enables complex composi
 var sums = [1,2,3].concatMap(x => [4,5,6].map(y => x + y))
 ```
 
-Comprehensions can help by allowing them to replace the code above with this expression...
+Comprehensions help by allowing them to replace the code above with this expression...
 
 
 ```JavaScript
@@ -29,11 +29,11 @@ var sums = (
       x + y);
 ```
 
-The combination of a comprehension syntax and the forthcoming async/await syntax in ES7 will remove the need to use closures for many use cases. So why delay comprehensions until ES7?
+The comprehension syntax removes the need to use closures in many cases. So why delay comprehensions until ES7?
 
 __Comprehensions are not future proof__, because they will not work on the forthcoming ES7 parallel array, nor the yet-to-be proposed asynchronous generator. The comprehension syntax should be able to be used to compose any collection type, so we should introduce a more generic syntax (1-2-n rule).
 
-In ES7 we should add a monadic comprehension syntax capable of composing arrays, variables, parallel arrays, and asynchronous generators. Furthermore it will be possible to add comprehension support for future types without new syntax. The monadic comprehension syntax will desugar into method calls, allowing the type itself to define how it is composed. For more information, see the ES7 monadic comprehension syntax proposal below.
+In ES7 we should add a monadic comprehension syntax capable of composing arrays, variables, parallel arrays, and asynchronous generators. Furthermore it will be possible to add comprehension support for future types without new syntax. The monadic comprehension syntax will desugar into method calls, allowing the type itself to define how it is composed. For more information see the ES7 monadic comprehension syntax proposal below.
 
 Although some developers prefer using the comprehension syntax, __comprehensions will never support all operations__.  If developers want to use operations like some(), any(), and contains() they will be forced to use method chaining. In these circumstances, many developers will eschew the comprehension syntax in order to avoid using using multiple composition styles in a single expression. In other words, many developers will prefer this…
 
@@ -78,7 +78,7 @@ By being explicit about the kind of flattening strategy being applied, we remove
 Add a return method to Generators
 ----------------------------------------------
 
-Generator allow for the lazy evaluation of algorithms. Lazy evaluation is particularly useful in the area of stream processing, allowing chunks of data to be transformed and sent elsewhere as they arrive. The alternative, loading an entire stream of data into memory before processing, is impractical for large data sets.
+Generators allow for the lazy evaluation of algorithms. Lazy evaluation is particularly useful in the area of stream processing, allowing chunks of data to be transformed and sent elsewhere as they arrive. The alternative, loading an entire stream of data into memory before processing, is impractical for large data sets.
 
 Today it is possible for generators to abstract over scarce resources like IO streams. However the consumer must iterate the generator to completion to give the generator function the opportunity to free the scarce resources in its finally block.
 
@@ -86,7 +86,7 @@ Today it is possible for generators to abstract over scarce resources like IO st
 
 This unnecessary constraint makes common operations like paging impractical because of the overhead involved. Why should a consumer need to continue reading from a stream long after the desired data has been acquired?
 
-This problem can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics. Invoking return() should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources. To guarantee the termination of the generator function on return(), yield statements will be prohibited within finally blocks.
+This problem can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics to throw. Invoking return() should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources. To guarantee the termination of the generator function on return(), yield statements will be prohibited within finally blocks.
 
 The addition of the return method to the iterator will allow commonly used methods like takeWhile to be written.
 
@@ -141,7 +141,10 @@ The Iterable constructor's iterate() method is expected to return a newly constr
 Generator functions should return Iterables, not Iterators
 --------------------------
 
-Today ES6 is optimized to make the Iterator easy to use.  __This is not the right goal.__ Iterators are complex objects, requiring state machines to use correctly.
+Today ES6 is optimized to make the Iterator easy to use.  __This is not the right goal, .__ Iterators are complex objects. They are stateful and consuming them . In our zeal to reduce the complexity of the Iterator API, we have oversimplified the type and defeated extremely important use cases.
+
+Furthermore after adding the necessary return method to generators, they will have a lifecycle as well.  
+
 
 This change is motivated by a simple design goal:
 
