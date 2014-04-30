@@ -5,21 +5,22 @@ The current generator proposal in ES6 is deficient in several important ways.
 
 1. Comprehensions are not future proof. They will not be able to be used to compose either the forthcoming parallel array or the asynchronous generator objects that are slated for introduction in ES7. http://smallcultfollowing.com/babysteps/blog/2014/04/24/parallel-pipelines-for-js/
 2. The generator comprehension syntax provides functionality not otherwise available through method chaining.
-3. The Iterable contract provides no guarantee that the iterator object has been freshly created for the consumer. Without a guarantee of freshness, it is impossible to implement common stream operators over this contract (ex. retry).
-4. Generators lack a return() semantic, which forces consumers to fully complete iteration in order to free any scarce resources (ex. IO streams). This makes common stream operations like paging prohibitively expensive.
+3. The Iterable contract does not dependably create a new iterator object for each iteration. Due to this inconsistency, it is impossible to implement several common stream operators over this contract (ex. retry).
+4. There is no way to short-circuit a generator. This forces consumers to fully complete iteration in order to free any scarce resources (ex. IO streams) opened by the generator. As a result, paging streams of data is prohibitively expensive.
  
 These issues can be resolved if we make the following changes to the ES6 specification. 
 
 Move the comprehension syntax to ES7
 ------------------------------------------------------
 
-The comprehension syntax's value proposition is that it *enables complex composition without the need to create deeply nested closures.* Many developers get confused when faced with a deeply nested closure. Comprehensions can help by allowing them to replace the following expression...
+The comprehension syntax's value proposition is that it *enables complex composition without the need to create deeply nested closures.* Many developers get confused when faced with code like this: 
 
 ```JavaScript
 var sums = [1,2,3].concatMap(x => [4,5,6].map(y => x + y))
 ```
 
-…with this:
+Comprehensions can help by allowing them to replace the code above with this expression...
+
 
 ```JavaScript
 var sums = (
@@ -28,13 +29,13 @@ var sums = (
       x + y);
 ```
 
-The combination of a comprehension syntax and the forthcoming async/await syntax in ES7 will remove the need to use closures entirely in many circumstances. So why delay comprehensions until ES7?
+The combination of a comprehension syntax and the forthcoming async/await syntax in ES7 will remove the need to use closures for many use cases. So why delay comprehensions until ES7?
 
 __Comprehensions are not future proof__, because they will not work on the forthcoming ES7 parallel array, nor the yet-to-be proposed asynchronous generator. The comprehension syntax should be able to be used to compose any collection type, so we should introduce a more generic syntax (1-2-n rule).
 
-In ES7 we will add a monadic comprehension syntax capable of composing arrays, variables, parallel arrays, asynchronous generators, and any type introduced in the future. The monadic comprehension syntax will desugar into method calls, allowing the type itself to define how it is composed. For more information, see the ES7 monadic comprehension syntax proposal below.
+In ES7 we should add a monadic comprehension syntax capable of composing arrays, variables, parallel arrays, and asynchronous generators. Furthermore it will be possible to add comprehension support for future types without new syntax. The monadic comprehension syntax will desugar into method calls, allowing the type itself to define how it is composed. For more information, see the ES7 monadic comprehension syntax proposal below.
 
-Although some developers prefer using the comprehension syntax, it will never support all operations.  If developers want to use operations like some(), any(), and contains() they will be forced to use method chaining. In these circumstances, many developers will eschew the comprehension syntax in order to avoid using using multiple composition styles in a single expression. In other words, many developers will prefer this…
+Although some developers prefer using the comprehension syntax, __comprehensions will never support all operations__.  If developers want to use operations like some(), any(), and contains() they will be forced to use method chaining. In these circumstances, many developers will eschew the comprehension syntax in order to avoid using using multiple composition styles in a single expression. In other words, many developers will prefer this…
 
 ```Javascript
 var numberExists = list.concatMap(y => otherList.map(x => x + y)).some(x => 42);
@@ -50,12 +51,12 @@ var numberExists = (
     some(x => 42);
 ```
 
-__It is important that we enable the same types of composition regardless of whether a developer is using the comprehension syntax or method chaining.__ To ensure this, we must add additional combinators to the prototypes of the various collections.
+__It is important that we enable the same types of composition operations regardless of whether a developer is using the comprehension syntax or method chaining.__ To ensure this, we must add additional combinators to the prototypes of the various collections.
  
 Add concatMap method to the Array prototype
 ------------------
 
-We will add the following method to the Array prototype:
+To facilitate array composition with method chaining we will add concatMap to the Array prototype:
   
 ```JavaScript
 Array.prototype.concatMap = function(projection) {
@@ -68,11 +69,9 @@ Array.prototype.concatMap = function(projection) {
 }
 ```
 
-In the absence of comprehensions in ES6, this method will allow developers to compose array expressions using function chaining. The name concatMap (used in Haskell) has been deliberately selected in lieu of flatMap, in order to be explicit about the type of flattening strategy applied after the map operation.
+The name concatMap (used in Haskell) has been deliberately selected in lieu of flatMap, in order to be explicit about the type of flattening strategy applied after the map operation.
 
-Why specify concatenation explicitly? While concatenation is the only sensible way of flattening a two-dimensional array or generator, the same same is not true for asynchronous generators. Asynchronous generators send information over time which allows for the other flattening strategies to be applied. 
-
-Concatenation flattens a two-dimensional collection by ordering elements based on the order in which each inner collection arrives, as well as the order of the elements within each inner collection. Another flattening strategy is a __merge__, which when applied to a two-dimensional asynchronous generator orders items based on the order they arrive in time, irrespective of the order in which their inner collections arrives. Merge acts like a funnel, forwarding items as soon as they arrive in time, and is appropriate when throughput is more important than preserving order.
+Why specify concatenation explicitly? While concatenation is the only sensible way of flattening a two-dimensional array or generator, the same same is not true for asynchronous generators. Asynchronous generators send information over time, allowing for other flattening strategies to be applied (ex. merge, switch latest).
 
 By being explicit about the kind of flattening strategy being applied, we remove a potential __refactoring hazard__. Let's say a developer decides that they want to change a generator expression to an asynchronous generator expression. By forcing the developer to be explicit about the flattening strategy, the asynchronous generator expression will have the same ordering of elements as the synchronous generator expression by default.
 
@@ -81,11 +80,11 @@ Add a return method to Generators
 
 Generator allow for the lazy evaluation of algorithms. Lazy evaluation is particularly useful in the area of stream processing, allowing chunks of data to be transformed and sent elsewhere as they arrive. The alternative, loading an entire stream of data into memory before processing, is impractical for large data sets.
 
-Today it is possible for generators to abstract over scarce resources like IO streams. However the consumer must iterate the generator to completion to give the generator function the opportunity to free the scarce resources and its finally block.
+Today it is possible for generators to abstract over scarce resources like IO streams. However the consumer must iterate the generator to completion to give the generator function the opportunity to free the scarce resources in its finally block.
 
 (Example)
 
-This imposed constraint makes common operations like paging impractical because of the overhead involved. Why should a consumer need to continue reading from a stream long after the desired data has been acquired?
+This unnecessary constraint makes common operations like paging impractical because of the overhead involved. Why should a consumer need to continue reading from a stream long after the desired data has been acquired?
 
 This problem can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics. Invoking return() should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources. To guarantee the termination of the generator function on return(), yield statements will be prohibited within finally blocks.
 
@@ -95,7 +94,7 @@ The addition of the return method to the iterator will allow useful methods like
 
 Methods like takeWhile allow developers to conditionally consume sequences without having to build state machines.
 
-However as you can see from the example above, takeUntil cannot be chained with other combinators left-to-right because iterators do not have a shared prototype. Thanks to frameworks like jQuery, JavaScript developers have grown accustomed to building expressions via method chaining. Dave Herman recently coined a name for this pattern: _the pipeline adapter pattern_.
+However as you can see from the example above, takeUntil cannot be chained with other combinators left-to-right because iterators do not have a shared prototype. Instead it is necessary to compose functions right to left. Thanks to frameworks like jQuery, JavaScript developers have grown accustomed to building expressions via method chaining. Dave Herman recently coined a name for this pattern: _the pipeline adapter pattern_.
 
 How can we enable developers to build complex stream processors using the pipeline pattern?
 
