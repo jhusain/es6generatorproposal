@@ -1,13 +1,34 @@
 ES6 Generator Proposal
 ==============================
 
-The current generator proposal in ES6 is deficient in several important ways.
+Today the generator proposal in ES6 is flawed in several important ways. The result is that generators, as specified today, can not be effectively used for stream processing.
+
+We aim to convince you of the following:
+
+* Stream processing is an important use case for generators to support.
+* Stream processing via generators is broken in ES6.
+* __The problem can be easily fixed__ with very few changes to the current specification.
+* These fixes will create a platform on which we can build support for async stream processing in ES7.
+
+If we agree that ES6 must be an effective stream programming language, we must first define success. The reason we are where we are today, is that success has been incorrectly defined as...
+
+_An Iterator API that is easy to use._
+
+__We contend this is entirely the wrong goal.__ In this proposal we argue for a much more ambitious definiton of success:
+
+_For the vast majority of use cases, developers should not need to use an Iterator._ In fact, if ES6 is designed correctly, most developers will never know the Iterator type exists.
+
+This goal, ambitious though it may seem, has already been achieved by a popular, widely-used programming language: C#. In fact, this proposal contains absolutely _no new ideas_. It can be summed up in a sentence: __when it comes to stream processing, ES6 should borrow from C#, not Python.__
+
+
+
+
 
 1. Comprehensions are not future proof. They will not be able to be used to compose either the parallel array or the asynchronous generator objects slated for introduction in ES7. http://smallcultfollowing.com/babysteps/blog/2014/04/24/parallel-pipelines-for-js/
 2. The generator comprehension syntax provides functionality not otherwise available through the standard library.
 3. The Iterable contract does not dependably create a new iterator object for each iteration. Due to this inconsistency, it is impossible to implement common stream operators over this contract (ex. retry).
 4. There is no way to short-circuit a generator. As a result, paging streams of data is prohibitively expensive.
- 
+
 These issues can be resolved if we make the following changes to the ES6 specification. 
 
 Move the comprehension syntax to ES7
