@@ -1,19 +1,22 @@
 ES6 Generator Proposal
 ==============================
 
-Today the generator proposal in ES6 is flawed in several important ways. The result is that generators, as specified today, can not be effectively used for stream processing. For more details, see the slides presented to the committee
+Today the generator proposal in ES6 is flawed in several important ways. The result is that generators, as specified today, can not be effectively used for stream processing. 
 
 I contend that...
 
 * Stream processing is a vitally important use case for generators to support.
-* Stream processing via generators is broken in ES6.
-* The problem can be easily fixed with very few changes to the current specification.
-* We can _not_ fix these issues retroactively in ES7.
-* These fixes are vital to enable the addition of asynchronous generator functions in ES7.
+* Stream processing can easily be supported with very few changes to the current specification.
+* The issues can _not_ be resolved retroactively in ES7.
+* Resolving these issues is necessary to enable asynchronous generators to support stream processing in ES7.
 
-An effective stream programming language should have the following desirable features:
+There are several problems with the existing specification. However before we get into specifics, it is important to highlight the higher order bit. __The reason that generators do not currently support stream processing, is that we have been focused on the wrong goal.__ We have been trying to make the generator API easy to use, but in doing so we have oversimplified the type and left out important semantics.
 
-* A comprehension syntax that can be used to compose any stream, synchronous or asynchronous.
+__For the vast majority of stream processing use cases, developers do not need to interact directly with an iterator.__ As libraries like Underscore demonstrate, most stream processing can be accomplished with a small set of well-designed combinator functions. If we add these functions to the standard library, and making them easy to chain together to form stream processing pipelines is much more important than attempting to (over)simplify the Iterator API.
+
+In order to be effective as a stream programming language, ES6/7 should have the following features:
+
+* A comprehension syntax that can be used to compose any type, synchronous or asynchronous.
 * Collection types that cleanly abstract over sync and async IO, allowing comprehensions to be used to build stream processors.
 * A small but comprehensive library of stream operators so powerful, most developers never need to use an iterator directly.
 
