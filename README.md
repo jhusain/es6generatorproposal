@@ -1,23 +1,25 @@
 ES6 Generator Proposal
 ==============================
 
-Today the generator proposal in ES6 is flawed in several important ways. The result is that generators, as specified today, can not be effectively used for stream processing. 
+Today the generator proposal in ES6 is flawed in several important ways. The result is that generators, as specified today, can not be used for stream processing. 
 
 I contend that...
 
 * Stream processing is a vitally important use case for generators to support.
 * Stream processing can easily be supported with very few changes to the current specification.
-* The issues can _not_ be resolved retroactively in ES7.
-* Resolving these issues is necessary to enable asynchronous generators to support stream processing in ES7.
+* If problems with the specification are not fixed now, they can _not_ be resolved retroactively in ES7.
+* Resolving these issues is necessary to support asynchronous generators in ES7.
 
-There are several problems with the existing specification. However before we get into specifics, it is important to highlight the higher order bit. __The reason that generators do not currently support stream processing, is that we have been focused on the wrong goal.__ We have been trying to make the generator API easy to use, but in doing so we have oversimplified the type and left out important semantics.
+There are several problems with the existing specification. However before we get into specifics, it is important to understand how we got here. __The reason that generators do not currently support stream processing is that we have been focused on the wrong goal.__ We have been trying to make the generator API easy to use, but in doing so we have oversimplified the type and left out important semantics.
 
-__For the vast majority of stream processing use cases, developers do not need to interact directly with an iterator.__ As libraries like Underscore demonstrate, most stream processing can be accomplished with a small set of well-designed combinator functions. If we add these functions to the standard library, and making them easy to chain together to form stream processing pipelines is much more important than attempting to (over)simplify the Iterator API.
+__in the vast majority of use cases, developers do not need to interact directly with an iterator.__ As libraries like Underscore demonstrate, most generator use cases can be accommodated with a small set of well-designed combinator functions. Our goal should be to __add a small but comprehensive set of combinator functions to the standard library, and make it easy to chain them together to create generator expressions.__ If we do this, the (irreducible) complexity of the iterator type will only be exposed in rare set of advanced scenarios.
+
+__In short, don't try and make iterators easy to use, make them invisible.__
 
 In order to be effective as a stream programming language, ES6/7 should have the following features:
 
 * A comprehension syntax that can be used to compose any type, synchronous or asynchronous.
-* Collection types that cleanly abstract over sync and async IO, allowing comprehensions to be used to build stream processors.
+* Generators that can cleanly abstract over scarce resources, allowing comprehensions to be used to build stream processors.
 * A small but comprehensive library of stream operators so powerful, most developers never need to use an iterator directly.
 
 We can have all of these features (and more) if we make the following changes to the specification.
