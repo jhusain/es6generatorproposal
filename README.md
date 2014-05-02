@@ -1,25 +1,31 @@
 ES6 Generator Proposal
 ==============================
 
-Today the generator proposal in ES6 is flawed in several important ways. The result is that generators, as specified today, can not be used for stream processing. 
+Today the design of ES6 generators is flawed in several important ways. The result is that generators, as specified today, can not be used for stream processing. 
 
 I contend that...
 
 * Stream processing is a vitally important use case for generators to support.
-* Stream processing can easily be supported with very few changes to the current specification.
-* If problems with the specification are not fixed now, they can _not_ be resolved retroactively in ES7.
-* Resolving these issues is necessary to support asynchronous generators in ES7.
+* Generators can be used for stream processing if we make small changes to the current specification.
+* The issues with the current specification can _not_ be resolved retroactively in ES7.
+* Resolving these issues are necessary to enable asynchronous generators in ES7.
 
-There are several problems with the existing specification. However before we get into specifics, it is important to understand how we got here. __The reason that generators do not currently support stream processing is that we have been focused on the wrong goal.__ We have been trying to make the generator API easy to use, but in doing so we have oversimplified the type and left out important semantics.
+While there are many issues preventing ES6 from being an effective stream processing language, the crux of the problem is as follows:
 
-__in the vast majority of use cases, developers do not need to interact directly with an iterator.__ As libraries like Underscore demonstrate, most generator use cases can be accommodated with a small set of well-designed combinator functions. Our goal should be to __add a small but comprehensive set of combinator functions to the standard library, and make it easy to chain them together to create generator expressions.__ If we do this, the (irreducible) complexity of the iterator type will only be exposed in rare set of advanced scenarios.
+In an effort to make the generator API easy to use, we have oversimplified the type. We have failed to add life cycle semantics that would allow generators to abstract over scarce resources like IO. While creating a simple API is a worthwhile pursuit, we must remain cognizant of this simple fact: 
 
-__In short, don't try and make iterators easy to use, make them invisible.__
+__In the overwhelming majority of use cases, developers should not need to interact directly with the Iterator API.__ 
 
-In order to be effective as a stream programming language, ES6/7 should have the following features:
+As libraries like Underscore demonstrate, most generator use cases can be accommodated with a small set of well-designed combinator functions. Instead of focusing on (over)simplifying the Iterator API, we should __ensure that it easy to build generator pipelines by chaining combinators .__ If we do this, the irreducible complexity of the iterator type will only be exposed in rare set of advanced scenarios. In short...
 
-* A comprehension syntax that can be used to compose any type, synchronous or asynchronous.
-* Generators that can cleanly abstract over scarce resources, allowing comprehensions to be used to build stream processors.
+__...we should not be focused on making the Iterator easy to use. We should be focused on making the Iterator _invisible_ to the vast majority of developers.__
+
+This is not an ambitious goal. In fact it has already been accomplished by a widely-used programming language: C#. __This proposal contains no new ideas.__  In fact it can be summed up in a sentence: when it comes to stream processing, ES6 should borrow from C#, not Python.
+
+C# has the following desirable attributes:
+
+* A comprehension syntax that can be used to compose any collection type.
+* Iterators that can abstract over scarce resources, allowing comprehensions to be used to build stream processors.
 * A small but comprehensive library of stream operators so powerful, most developers never need to use an iterator directly.
 
 We can have all of these features (and more) if we make the following changes to the specification.
@@ -119,9 +125,10 @@ var iterator = getLines("./prices.txt"),
 while(!(pair = iterator.next()).done && prices.length < 20) {
   prices.push(pair.value);
 }
+// if we get 20 prices before the end of the file, we leak the file handle!
 ```
 
-To ensure scarce resources are properly freed it is necessary to always iterate to completion, even if the desired subset of data has already been acquired. This makes common stream operations like paging impractical because of the overhead involved. 
+To ensure scarce resources are properly freed it is necessary to always iterate to completion, even if the desired subset of data has already been acquired. This makes it impractical to use generators for common stream operations like paging, because of the unnecessary overhead that must be incurred. 
 
 This problem is easily resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics to throw. Invoking return() should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources. To guarantee the termination of the generator function on return(), yield statements will be prohibited within finally blocks.
 
@@ -175,14 +182,14 @@ In addition to these prototype methods, the Iterable constructor will also have 
 * of
 * from
 
-The introduction of the Iterable constructor allows stream processing expressions to be built using the pipeline adapter pattern. 
-
-The style of composition is expressive enough to replace comprehensions until they are introduced in ES7.
+The introduction of the Iterable constructor allows stream processing expressions to be built using the pipeline adapter pattern. The style of composition is expressive enough to replace comprehensions until they are introduced in ES7.
 
 The Iterable constructor's iterate() method is expected to return a newly constructed iterator every time it is invoked.
 
-Consume and Emit Iterables, not Iterators
+Language Features should Consume and Emit Iterables, not Iterators
 --------------------------
+
+Iterators are irreducibly complex. They are mutable, and require a state machine to consume. To avoid leaking scarce resources, they must also be explicitly finalized
 
 Today the ES6 Iterator API is optimized for ease of use. This goal is not easy to achieve. Iterators are complex types. They are mutable objects, and consuming their data requires building a state machine. Furthermore Iterators must have a lifecycle, and be properly disposed to avoid leaking scarce resources.
 
