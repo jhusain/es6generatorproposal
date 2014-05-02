@@ -10,13 +10,13 @@ I contend that...
 * The issues with the current specification can _not_ be resolved retroactively in ES7.
 * Resolving these issues are necessary to enable asynchronous generators in ES7.
 
-While there are many issues preventing ES6 from being an effective stream processing language, the crux of the problem is as follows:
+While there are several small issues preventing ES6 from being an effective stream processing language, the crux of the problem is as follows:
 
-In an effort to make the generator API easy to use, we have oversimplified the type. We have failed to add life cycle semantics that would allow generators to abstract over scarce resources like IO. While creating a simple API is a worthwhile pursuit, we must remain cognizant of this simple fact: 
+In an effort to make the generator API easy to use, we have oversimplified the type. We have failed to add the life cycle semantics that would allow generators to abstract over scarce resources (ex. IO streams). While creating a simple Iterator API is a worthwhile pursuit, we must remain cognizant of this simple fact: 
 
 __In the overwhelming majority of use cases, developers should not need to interact directly with the Iterator API.__ 
 
-As libraries like Underscore demonstrate, most generator use cases can be accommodated with a small set of well-designed combinator functions. Instead of focusing on (over)simplifying the Iterator API, we should __ensure that it easy to build generator pipelines by chaining combinators .__ If we do this, the irreducible complexity of the iterator type will only be exposed in rare set of advanced scenarios. In short...
+As libraries like Underscore demonstrate, most generator use cases can be accommodated with a small set of well-designed combinator functions. Instead of focusing on (over)simplifying the Iterator API, we should __ensure that it easy to build generator pipelines by chaining combinators .__ If we do this, we an add the necessary semantics to Iterators, secure in the knowledge that the additional complexity will rarely be exposed. In short...
 
 __...we should not be focused on making the Iterator easy to use. We should be focused on making the Iterator _invisible_ to the vast majority of developers.__
 
