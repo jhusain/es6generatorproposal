@@ -1,37 +1,25 @@
 ES6 Generator Proposal
 ==============================
 
-Today the generator proposal in ES6 is flawed in several important ways. The result is that generators, as specified today, can not be effectively used for stream processing.
+Today the generator proposal in ES6 is flawed in several important ways. The result is that generators, as specified today, can not be effectively used for stream processing. For more details, see the slides presented to the committee
 
-We aim to convince you of the following:
+I contend that...
 
-* Stream processing is an important use case for generators to support.
+* Stream processing is a vitally important use case for generators to support.
 * Stream processing via generators is broken in ES6.
-* __The problem can be easily fixed__ with very few changes to the current specification.
-* These fixes will create a platform on which we can build support for async stream processing in ES7.
+* The problem can be easily fixed with very few changes to the current specification.
+* We can _not_ fix these issues retroactively in ES7.
+* These fixes are vital to enable the addition of asynchronous generator functions in ES7.
 
-If we agree that ES6 must be an effective stream programming language, we must first define success. The reason we are where we are today, is that success has been incorrectly defined as...
+An effective stream programming language should have the following desirable features:
 
-_An Iterator API that is easy to use._
+* A comprehension syntax that can be used to compose any stream, synchronous or asynchronous.
+* Collection types that cleanly abstract over sync and async IO, allowing comprehensions to be used to build stream processors.
+* A small but comprehensive library of stream operators so powerful, most developers never need to use an iterator directly.
 
-__We contend this is entirely the wrong goal.__ In this proposal we argue for a much more ambitious definiton of success:
+We can have all of these features (and more) if we make the following changes to the specification.
 
-_For the vast majority of use cases, developers should not need to use an Iterator._ In fact, if ES6 is designed correctly, most developers will never know the Iterator type exists.
-
-This goal, ambitious though it may seem, has already been achieved by a popular, widely-used programming language: C#. In fact, this proposal contains absolutely _no new ideas_. It can be summed up in a sentence: __when it comes to stream processing, ES6 should borrow from C#, not Python.__
-
-
-
-
-
-1. Comprehensions are not future proof. They will not be able to be used to compose either the parallel array or the asynchronous generator objects slated for introduction in ES7. http://smallcultfollowing.com/babysteps/blog/2014/04/24/parallel-pipelines-for-js/
-2. The generator comprehension syntax provides functionality not otherwise available through the standard library.
-3. The Iterable contract does not dependably create a new iterator object for each iteration. Due to this inconsistency, it is impossible to implement common stream operators over this contract (ex. retry).
-4. There is no way to short-circuit a generator. As a result, paging streams of data is prohibitively expensive.
-
-These issues can be resolved if we make the following changes to the ES6 specification. 
-
-Move the comprehension syntax to ES7
+Move comprehensions to ES7 and make them monadic
 ------------------------------------------------------
 
 The comprehension syntax's value proposition is that it *enables complex composition without the need to create deeply nested closures.* Many developers get confused when faced with code like this: 
@@ -41,7 +29,6 @@ var sums = [1,2,3].concatMap(x => [4,5,6].map(y => x + y))
 ```
 
 Comprehensions help by allowing them to replace the code above with this expression...
-
 
 ```JavaScript
 var sums = (
@@ -101,24 +88,54 @@ Add a return method to Generators
 
 Generators allow for the lazy evaluation of algorithms. Lazy evaluation is particularly useful in the area of stream processing, allowing chunks of data to be transformed and sent elsewhere as they arrive. The alternative, loading an entire stream of data into memory before processing, is impractical for large data sets.
 
-Today it is possible for generators to abstract over scarce resources like IO streams. However the consumer must iterate the generator to completion to give the generator function the opportunity to free the scarce resources in its finally block.
+Today it is possible for generators to abstract over scarce resources like IO streams.
 
-(Example)
+```JavaScript
+function getLines*(fileName) {
+  let reader = new SyncReader(fileName);
+  try {
+    while(!reader.eof) {
+      yield reader.readLine();
+    }
+  }
+  finally {
+    reader.close();     
+  } 
+};
 
-This unnecessary constraint makes common operations like paging impractical because of the overhead involved. Why should a consumer need to continue reading from a stream long after the desired data has been acquired?
+However the consumer must iterate the generator to completion to give the generator function the opportunity to free the scarce resources in its finally block. In the example below, breaking out of the iteration early leaks the file handle.
 
-This problem can be resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics to throw. Invoking return() should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources. To guarantee the termination of the generator function on return(), yield statements will be prohibited within finally blocks.
+```JavaScript
+var prices = [];
 
-The addition of the return method to the iterator will allow commonly used methods like takeWhile to be written.
+var iterator = getLines("./prices.txt"),
+  pair;
 
-(Example)
+while(!(pair = iterator.next()).done && prices.length < 20) {
+  prices.push(pair.value);
+}
+```
 
-Methods like takeWhile allow developers to conditionally consume sequences without having to build state machines.
+To ensure scarce resources are properly freed it is necessary to always iterate to completion, even if the desired subset of data has already been acquired. This makes common stream operations like paging impractical because of the overhead involved. 
 
-However as you can see from the example above, takeUntil cannot be chained with other combinators left-to-right because iterators do not have a shared prototype. Instead it is necessary to compose functions right to left. Thanks to frameworks like jQuery, JavaScript developers have grown accustomed to building expressions via method chaining. Dave Herman recently minted a name for this pattern: _the pipeline adapter pattern_.
+This problem is easily resolved by adding a return semantic to the generator. Today generator functions give consumers the ability to insert a throw statement at the current yield point by invoking the throw method on the generator. A return method should be added to generator which has similar semantics to throw. Invoking return() should cause the generator function to behave as a though a return statement was added at the current yield point within the generator. This will ensure that finally blocks get run, giving the asynchronous generator the opportunity to free scarce resources. To guarantee the termination of the generator function on return(), yield statements will be prohibited within finally blocks.
 
-How can we enable developers to build complex stream processors using the pipeline pattern?
+The addition of the return method will allow generators to cleanly abstract over scarce resources like IO streams.
 
+```JavaScript
+var prices = [];
+
+var iterator = getLines("./prices.txt"),
+  pair;
+
+while(!(pair = iterator.next()).done && prices.length < 20) {
+  prices.push(pair.value)
+}
+
+if (!pair.done) {
+  pair.return();
+}
+```
 
 The Iterable Constructor
 --------------------------------
@@ -159,13 +176,12 @@ The style of composition is expressive enough to replace comprehensions until th
 
 The Iterable constructor's iterate() method is expected to return a newly constructed iterator every time it is invoked.
 
-Generator functions should return Iterables, not Iterators
+Consume and Emit Iterables, not Iterators
 --------------------------
 
-Today ES6 is optimized to make the Iterator easy to use.  __This is not the right goal, .__ Iterators are complex objects. They are stateful and consuming them . In our zeal to reduce the complexity of the Iterator API, we have oversimplified the type and defeated extremely important use cases.
+Today the ES6 Iterator API is optimized for ease of use. This goal is not easy to achieve. Iterators are complex types. They are mutable objects, and consuming their data requires building a state machine. Furthermore Iterators must have a lifecycle, and be properly disposed to avoid leaking scarce resources.
 
-Furthermore after adding the necessary return method to generators, they will have a lifecycle as well.  
-
+In our zeal to make iterator API usable, we oversimplified the type and broke an entirely 
 
 This change is motivated by a simple design goal:
 
