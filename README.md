@@ -7,7 +7,7 @@ I contend that...
 
 * Stream processing is a vitally important use case for generators to support.
 * Generators can be used for stream processing if we make small changes to the current specification.
-* The issues with the current specification can _not_ be resolved retroactively in ES7.
+* Some of the issues with the current specification can _not_ be resolved retroactively in ES7.
 * Resolving these issues are necessary to enable asynchronous generators in ES7.
 
 While there are several small issues preventing ES6 from being an effective stream processing language, the crux of the problem is as follows:
@@ -189,7 +189,13 @@ The Iterable constructor's iterate() method is expected to return a newly constr
 Language Features should Consume and Emit Iterables, not Iterators
 --------------------------
 
-Iterators are irreducibly complex. They are mutable, and require a state machine to consume. To avoid leaking scarce resources, they must also be explicitly finalized
+Generator functions should return Iterables, not Iterators. I'm addition, for...of should operate on Iterables, not Iterators.
+
+__We have added syntactic support for the wrong type.__
+
+Iterators are irreducibly complex. They are mutable, and require a state machine to consume. To avoid leaking scarce resources, they must also be explicitly finalized.
+
+
 
 Today the ES6 Iterator API is optimized for ease of use. This goal is not easy to achieve. Iterators are complex types. They are mutable objects, and consuming their data requires building a state machine. Furthermore Iterators must have a lifecycle, and be properly disposed to avoid leaking scarce resources.
 
