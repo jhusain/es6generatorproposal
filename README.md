@@ -16,7 +16,7 @@ In an effort to make the generator API easy to use, we have oversimplified the t
 
 __In the overwhelming majority of use cases, developers should not need to interact directly with the Iterator API.__ 
 
-As libraries like Underscore demonstrate, most generator use cases can be accommodated with a small set of well-designed combinator functions. Instead of focusing on (over)simplifying the Iterator API, we should __ensure that it easy to build generator pipelines by chaining combinators .__ If we do this, we an add the necessary semantics to Iterators, secure in the knowledge that the additional complexity will rarely be exposed. In short...
+As libraries like Underscore demonstrate, most generator use cases can be accommodated with a small set of well-designed combinator functions. Instead of focusing on (over)simplifying the Iterator API, we should instead __enable generator pipelines to be built by chaining combinators .__ If we do this, we an add the necessary semantics to Iterators, secure in the knowledge that the additional complexity will rarely be exposed. In short...
 
 __...we should not be focused on making the Iterator easy to use. We should be focused on making the Iterator _invisible_ to the vast majority of developers.__
 
@@ -191,13 +191,7 @@ Language Features should Consume and Emit Iterables, not Iterators
 
 Generator functions should return Iterables, not Iterators. I'm addition, for...of should operate on Iterables, not Iterators.
 
-__We have added syntactic support for the wrong type.__
-
-Iterators are irreducibly complex. They are mutable, and require a state machine to consume. To avoid leaking scarce resources, they must also be explicitly finalized.
-
-
-
-Today the ES6 Iterator API is optimized for ease of use. This goal is not easy to achieve. Iterators are complex types. They are mutable objects, and consuming their data requires building a state machine. Furthermore Iterators must have a lifecycle, and be properly disposed to avoid leaking scarce resources.
+__We have added syntactic support for the wrong type.__ Iterators are irreducibly complex. They are mutable, and require a state machine to consume. To avoid leaking scarce resources, they must also be explicitly finalized if iteration is short-circuited.
 
 In our zeal to make iterator API usable, we oversimplified the type and broke an entirely 
 
