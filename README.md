@@ -152,7 +152,7 @@ if (!pair.done) {
 The Iterable Constructor
 --------------------------------
 
-The Iterable contract should be replaced by an explicit constructor. The Iterable constructor will be used to create all instances of Iterables. An Iterable has an iterate() method which can return a Generator or an Iterator. 
+The Iterable contract should be replaced by an explicit constructor. The Iterable constructor will be used to create all instances of Iterables. An Iterable has an iterate() method which can return a Generator or an Iterator. The choice of the verb "iterate" rather than the noun "iterator" implies that an action is taking place (ie the creation of a fresh Iterator), and this method is not just a getter.
 
 ```JavaScript
 function Iterable(iterateMethodDefinition) {
@@ -189,18 +189,26 @@ The Iterable constructor's iterate() method is expected to return a newly constr
 Language Features should Consume and Emit Iterables, not Iterators
 --------------------------
 
-Generator functions should return Iterables, not Iterators. I'm addition, for...of should operate on Iterables, not Iterators.
+Generator functions should return Iterables, not Iterators. In addition, for...of should operate on Iterables, not Iterators. 
 
-__We have added syntactic support for the wrong type.__ Iterators are irreducibly complex. They are mutable, and require a state machine to consume. To avoid leaking scarce resources, they must also be explicitly finalized if iteration is short-circuited.
+These changes should be made for the following reasons:
 
-In our zeal to make iterator API usable, we oversimplified the type and broke an entirely 
+1. Clarify Iterator lifecycle management responsibilities.
+2. Better optimize for common stream operations like retry.
+3. Symmetry with asynchronous generators.
+
+The Iterable type allows a consumer to start a fresh iteration by providing them with a new Iterator. The value proposition of the for..of syntax is that it hides the complexity of a fresh iteration. Therefore I submit that the for...of syntax should operate on the Iterable type, not the Iterator.
+
+Why? Lifecycle management. With the introduction of the return method, it will be necessary to return the generator if iteration I s short-circuited. __If the for...of syntax operators on Iterators, then who is responsible for finalization if the loop is short-circuited?__ It is unclear. The developer has created the Iterator and is therefore capable of disposing of it. However the for...of syntax will _transparently_ create an Iterator when applied to an Iterable. In these 
+
+If the for...of syntax 
+
+If the for...of syntax operates on Iterables, it will be responsible for Iterator creation and finalization in the event a break statement short circuits iteration. This makes the 
+
 
 This change is motivated by a simple design goal:
 
-__It should be possible to consume the data produced by a generator function without needing to directly use an Iterator..__
-
-Iterators have complex interfaces, and require state machines to consume. With the introduction of the return method, they now have a lifecycle as well.
-
+__ in most cases, it should be possible to produce and consume generators without needing to directly use an Iterator..__
 
 
 Iterators have Iterators are mutable data structures and they are complex to use. We should embrace the following design principle:
